@@ -208,14 +208,14 @@ namespace Demos.SpecializedTests
             Test<Sphere, SphereWide, Cylinder, CylinderWide, SphereCylinderDistanceTester>(sphere, cylinder, ref posesA, ref posesB, iterationCount);
             Test<Capsule, CapsuleWide, Capsule, CapsuleWide, CapsulePairDistanceTester>(capsule, capsule, ref posesA, ref posesB, iterationCount);
             Test<Capsule, CapsuleWide, Box, BoxWide, CapsuleBoxDistanceTester>(capsule, box, ref posesA, ref posesB, iterationCount);
-            Test<Capsule, CapsuleWide, Triangle, TriangleWide, GJKDistanceTester<Capsule, CapsuleWide, CapsuleSupportFinder, Triangle, TriangleWide, TriangleSupportFinder>>(capsule, triangle, ref posesA, ref posesB, iterationCount);
-            Test<Capsule, CapsuleWide, Cylinder, CylinderWide, GJKDistanceTester<Capsule, CapsuleWide, CapsuleSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>>(capsule, cylinder, ref posesA, ref posesB, iterationCount);
-            Test<Cylinder, CylinderWide, Box, BoxWide, GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Box, BoxWide, BoxSupportFinder>>(cylinder, box, ref posesA, ref posesB, iterationCount);
-            Test<Cylinder, CylinderWide, Triangle, TriangleWide, GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Triangle, TriangleWide, TriangleSupportFinder>>(cylinder, triangle, ref posesA, ref posesB, iterationCount);
-            Test<Cylinder, CylinderWide, Cylinder, CylinderWide, GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>>(cylinder, cylinder, ref posesA, ref posesB, iterationCount);
-            Test<Box, BoxWide, Box, BoxWide, GJKDistanceTester<Box, BoxWide, BoxSupportFinder, Box, BoxWide, BoxSupportFinder>>(box, box, ref posesA, ref posesB, iterationCount);
-            Test<Box, BoxWide, Triangle, TriangleWide, GJKDistanceTester<Box, BoxWide, BoxSupportFinder, Triangle, TriangleWide, TriangleSupportFinder>>(box, triangle, ref posesA, ref posesB, iterationCount);
-            Test<Triangle, TriangleWide, Triangle, TriangleWide, GJKDistanceTester<Triangle, TriangleWide, TriangleSupportFinder, Triangle, TriangleWide, TriangleSupportFinder>>(triangle, triangle, ref posesA, ref posesB, iterationCount);
+            Test<Capsule, CapsuleWide, Triangle, TriangleWide, GJKDistanceTester<Capsule, CapsuleWide, CapsuleSupportFinder, Triangle, TriangleWide, TriangleSupportFinder, BepuVector>>(capsule, triangle, ref posesA, ref posesB, iterationCount);
+            Test<Capsule, CapsuleWide, Cylinder, CylinderWide, GJKDistanceTester<Capsule, CapsuleWide, CapsuleSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder, BepuVector>>(capsule, cylinder, ref posesA, ref posesB, iterationCount);
+            Test<Cylinder, CylinderWide, Box, BoxWide, GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Box, BoxWide, BoxSupportFinder, BepuVector>>(cylinder, box, ref posesA, ref posesB, iterationCount);
+            Test<Cylinder, CylinderWide, Triangle, TriangleWide, GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Triangle, TriangleWide, TriangleSupportFinder, BepuVector>>(cylinder, triangle, ref posesA, ref posesB, iterationCount);
+            Test<Cylinder, CylinderWide, Cylinder, CylinderWide, GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder, BepuVector>>(cylinder, cylinder, ref posesA, ref posesB, iterationCount);
+            Test<Box, BoxWide, Box, BoxWide, GJKDistanceTester<Box, BoxWide, BoxSupportFinder, Box, BoxWide, BoxSupportFinder, BepuVector>>(box, box, ref posesA, ref posesB, iterationCount);
+            Test<Box, BoxWide, Triangle, TriangleWide, GJKDistanceTester<Box, BoxWide, BoxSupportFinder, Triangle, TriangleWide, TriangleSupportFinder, BepuVector>>(box, triangle, ref posesA, ref posesB, iterationCount);
+            Test<Triangle, TriangleWide, Triangle, TriangleWide, GJKDistanceTester<Triangle, TriangleWide, TriangleSupportFinder, Triangle, TriangleWide, TriangleSupportFinder, BepuVector>>(triangle, triangle, ref posesA, ref posesB, iterationCount);
             Console.WriteLine($"Done. Hit enter to exit.");
             Console.ReadLine();
         }

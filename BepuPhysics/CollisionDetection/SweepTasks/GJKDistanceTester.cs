@@ -7,11 +7,12 @@ using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection.SweepTasks
 {
-    public struct GJKDistanceTester<TShapeA, TShapeWideA, TSupportFinderA, TShapeB, TShapeWideB, TSupportFinderB> : IPairDistanceTester<TShapeWideA, TShapeWideB>
+    public struct GJKDistanceTester<TShapeA, TShapeWideA, TSupportFinderA, TShapeB, TShapeWideB, TSupportFinderB, TVector> : IPairDistanceTester<TShapeWideA, TShapeWideB>
         where TShapeA : IConvexShape where TShapeB : IConvexShape
         where TShapeWideA : IShapeWide<TShapeA> where TShapeWideB : IShapeWide<TShapeB>
         where TSupportFinderA : struct, ISupportFinder<TShapeA, TShapeWideA>
         where TSupportFinderB : struct, ISupportFinder<TShapeB, TShapeWideB>
+        where TVector: IVector
     {
         public const float TerminationEpsilonDefault = 1e-7f;
         public const float ContainmentEpsilonDefault = 0.000316227766f;
@@ -68,19 +69,20 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void Select(ref Vector<int> mask,
+        void Select(ref TVector vector,
+            ref Vector<int> mask,
             ref Vector<float> distanceSquared, ref Vector3Wide closest, ref Vector3Wide closestA, ref Vector<int> featureId,
             in Vector<float> distanceSquaredCandidate, in Vector3Wide closestCandidate, in Vector3Wide closestACandidate, in Vector<int> featureIdCandidate)
         {
-            var useCandidate = Vector.BitwiseAnd(mask, Vector.LessThan(distanceSquaredCandidate, distanceSquared));
-            distanceSquared = Vector.ConditionalSelect(useCandidate, distanceSquaredCandidate, distanceSquared);
+            var useCandidate = vector.BitwiseAnd(mask, vector.LessThan(distanceSquaredCandidate, distanceSquared));
+            distanceSquared = vector.ConditionalSelect(useCandidate, distanceSquaredCandidate, distanceSquared);
             Vector3Wide.ConditionalSelect(useCandidate, closestCandidate, closest, out closest);
             Vector3Wide.ConditionalSelect(useCandidate, closestACandidate, closestA, out closestA);
-            featureId = Vector.ConditionalSelect(useCandidate, featureIdCandidate, featureId);
+            featureId = vector.ConditionalSelect(useCandidate, featureIdCandidate, featureId);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void Edge(ref Vector3Wide a, ref Vector3Wide b, ref Vector3Wide aOnA, ref Vector3Wide bOnA, out Vector3Wide ab, out Vector<float> abab, out Vector<float> abA, in Vector<int> aFeatureId, in Vector<int> bFeatureId,
+        void Edge (ref TVector vector, ref Vector3Wide a, ref Vector3Wide b, ref Vector3Wide aOnA, ref Vector3Wide bOnA, out Vector3Wide ab, out Vector<float> abab, out Vector<float> abA, in Vector<int> aFeatureId, in Vector<int> bFeatureId,
             ref Vector<int> mask, ref Vector<float> distanceSquared, ref Vector3Wide closest, ref Vector3Wide closestA, ref Vector<int> featureId)
         {
             Vector3Wide.Subtract(b, a, out ab);
@@ -89,10 +91,10 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             //Note that vertex B (and technically A, too) is handled by clamping the edge. No need to handle the vertices by themselves (apart from the base case).
             var abT = -abA / abab;
             //Protect against division by zero. It's a degenerate edge, so just pick vertex a as a representative.
-            abT = Vector.ConditionalSelect(Vector.GreaterThan(Vector.Abs(abab), new Vector<float>(1e-15f)), abT, Vector<float>.Zero);
-            var aFeatureContribution = Vector.ConditionalSelect(Vector.LessThan(abT, Vector<float>.One), aFeatureId, Vector<int>.Zero);
-            var bFeatureContribution = Vector.ConditionalSelect(Vector.GreaterThan(abT, Vector<float>.Zero), bFeatureId, Vector<int>.Zero);
-            var featureIdCandidate = Vector.BitwiseOr(aFeatureContribution, bFeatureContribution);
+            abT = vector.ConditionalSelect(vector.GreaterThan(vector.Abs(abab), new Vector<float>(1e-15f)), abT, Vector<float>.Zero);
+            var aFeatureContribution = vector.ConditionalSelect(vector.LessThan(abT, Vector<float>.One), aFeatureId, Vector<int>.Zero);
+            var bFeatureContribution = vector.ConditionalSelect(vector.GreaterThan(abT, Vector<float>.Zero), bFeatureId, Vector<int>.Zero);
+            var featureIdCandidate = vector.BitwiseOr(aFeatureContribution, bFeatureContribution);
 
             abT = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, abT));
             Vector3Wide.Scale(ab, abT, out var closestOnAB);
@@ -101,7 +103,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             Vector3Wide.Scale(abOnA, abT, out var closestOnABOnA);
             Vector3Wide.Add(closestOnABOnA, aOnA, out closestOnABOnA);
             Vector3Wide.LengthSquared(closestOnAB, out var distanceSquaredCandidate);
-            Select(ref mask,
+            Select(ref vector,
+                ref mask,
                 ref distanceSquared, ref closest, ref closestA, ref featureId,
                 distanceSquaredCandidate, closestOnAB, closestOnABOnA, featureIdCandidate);
         }
@@ -142,6 +145,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void Triangle(
+            ref TVector vector,
             ref Vector3Wide a, ref Vector3Wide b, ref Vector3Wide c,
             ref Vector3Wide aOnA, ref Vector3Wide bOnA, ref Vector3Wide cOnA,
             ref Vector<float> abA, ref Vector<float> acA,
@@ -195,12 +199,13 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             Vector3Wide.Add(cOnAContribution, closestACandidate, out closestACandidate);
             Vector3Wide.LengthSquared(closestCandidate, out var distanceSquaredCandidate);
             var combinedMask = Vector.BitwiseAnd(mask, projectionInTriangle);
-            Select(ref combinedMask,
+            Select(ref vector,
+                ref combinedMask,
                 ref distanceSquared, ref closest, ref closestA, ref featureId,
                 distanceSquaredCandidate, closestCandidate, closestACandidate, featureIdCandidate);
         }
 
-        void FindClosestPoint(ref Vector<int> outerLoopTerminatedMask, ref Simplex simplex, out Vector<float> distanceSquared, out Vector3Wide closestA, out Vector3Wide closest)
+        void FindClosestPoint(ref TVector vector, ref Vector<int> outerLoopTerminatedMask, ref Simplex simplex, out Vector<float> distanceSquared, out Vector3Wide closestA, out Vector3Wide closest)
         {
             //The outer loop mask considers 0 to be executing, -1 to be terminated.
             var activeMask = Vector.OnesComplement(outerLoopTerminatedMask);
@@ -232,7 +237,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             }
 
             //Edge AB:
-            Edge(ref simplex.A, ref simplex.B, ref simplex.AOnA, ref simplex.BOnA, out var ab, out var abab, out var abA, new Vector<int>(1), new Vector<int>(2),
+            Edge(ref vector, ref simplex.A, ref simplex.B, ref simplex.AOnA, ref simplex.BOnA, out var ab, out var abab, out var abA, new Vector<int>(1), new Vector<int>(2),
                 ref activeMask, ref distanceSquared, ref closest, ref closestA, ref featureId);
 
 
@@ -246,13 +251,14 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             activeMask = nextActiveMask;
 
             //Edge AC, BC:
-            Edge(ref simplex.A, ref simplex.C, ref simplex.AOnA, ref simplex.COnA, out var ac, out var acac, out var acA, new Vector<int>(1), new Vector<int>(4),
+            Edge(ref vector, ref simplex.A, ref simplex.C, ref simplex.AOnA, ref simplex.COnA, out var ac, out var acac, out var acA, new Vector<int>(1), new Vector<int>(4),
                 ref activeMask, ref distanceSquared, ref closest, ref closestA, ref featureId);
-            Edge(ref simplex.B, ref simplex.C, ref simplex.BOnA, ref simplex.COnA, out var bc, out var bcbc, out var bcB, new Vector<int>(2), new Vector<int>(4),
+            Edge(ref vector, ref simplex.B, ref simplex.C, ref simplex.BOnA, ref simplex.COnA, out var bc, out var bcbc, out var bcB, new Vector<int>(2), new Vector<int>(4),
                 ref activeMask, ref distanceSquared, ref closest, ref closestA, ref featureId);
 
             //Triangle ABC:
             Triangle(
+                ref vector,
                 ref simplex.A, ref simplex.B, ref simplex.C,
                 ref simplex.AOnA, ref simplex.BOnA, ref simplex.COnA,
                 ref abA, ref acA, ref ab, ref ac, ref abab, ref acac, new Vector<int>(1 | 2 | 4),
@@ -269,15 +275,16 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             activeMask = nextActiveMask;
 
             //Edges AD, BD, CD:
-            Edge(ref simplex.A, ref simplex.D, ref simplex.AOnA, ref simplex.DOnA, out var ad, out var adad, out var adA, new Vector<int>(1), new Vector<int>(8),
+            Edge(ref vector, ref simplex.A, ref simplex.D, ref simplex.AOnA, ref simplex.DOnA, out var ad, out var adad, out var adA, new Vector<int>(1), new Vector<int>(8),
                 ref activeMask, ref distanceSquared, ref closest, ref closestA, ref featureId);
-            Edge(ref simplex.B, ref simplex.D, ref simplex.BOnA, ref simplex.DOnA, out var bd, out var bdbd, out var bdB, new Vector<int>(2), new Vector<int>(8),
+            Edge(ref vector, ref simplex.B, ref simplex.D, ref simplex.BOnA, ref simplex.DOnA, out var bd, out var bdbd, out var bdB, new Vector<int>(2), new Vector<int>(8),
                 ref activeMask, ref distanceSquared, ref closest, ref closestA, ref featureId);
-            Edge(ref simplex.C, ref simplex.D, ref simplex.COnA, ref simplex.DOnA, out var cd, out var cdcd, out var cdC, new Vector<int>(4), new Vector<int>(8),
+            Edge(ref vector, ref simplex.C, ref simplex.D, ref simplex.COnA, ref simplex.DOnA, out var cd, out var cdcd, out var cdC, new Vector<int>(4), new Vector<int>(8),
                 ref activeMask, ref distanceSquared, ref closest, ref closestA, ref featureId);
 
             //Triangle ACD:    
             Triangle(
+                ref vector,
                 ref simplex.A, ref simplex.C, ref simplex.D,
                 ref simplex.AOnA, ref simplex.COnA, ref simplex.DOnA,
                 ref acA, ref adA, ref ac, ref ad, ref acac, ref adad, new Vector<int>(1 | 4 | 8),
@@ -285,6 +292,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
 
             //Triangle ABD:    
             Triangle(
+                ref vector,
                 ref simplex.A, ref simplex.B, ref simplex.D,
                 ref simplex.AOnA, ref simplex.BOnA, ref simplex.DOnA,
                 ref abA, ref adA, ref ab, ref ad, ref abab, ref adad, new Vector<int>(1 | 2 | 8),
@@ -292,6 +300,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
 
             //Triangle BCD:    
             Triangle(
+                ref vector,
                 ref simplex.B, ref simplex.C, ref simplex.D,
                 ref simplex.BOnA, ref simplex.COnA, ref simplex.DOnA,
                 ref bcB, ref bdB, ref bc, ref bd, ref bcbc, ref bdbd, new Vector<int>(2 | 4 | 8),
@@ -322,7 +331,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             var tetrahedronContains = Vector.BitwiseAnd(Vector.BitwiseAnd(abcInside, abdInside), Vector.BitwiseAnd(acdInside, bdcInside));
             var useTetrahedralResult = Vector.BitwiseAnd(tetrahedronContains, activeMask);
             //Note that we don't guarantee correct closest points in the intersecting case, so there's no need to blend with barycentric weights.
-            Select(ref useTetrahedralResult, ref distanceSquared, ref closest, ref closestA, ref featureId, Vector<float>.Zero, new Vector3Wide(), new Vector3Wide(), new Vector<int>(1 | 2 | 4 | 8));
+            Select(ref vector, ref useTetrahedralResult, ref distanceSquared, ref closest, ref closestA, ref featureId, Vector<float>.Zero, new Vector3Wide(), new Vector3Wide(), new Vector<int>(1 | 2 | 4 | 8));
 
             TryRemove(ref simplex, 3, featureId, activeMask);
             TryRemove(ref simplex, 2, featureId, activeMask);
@@ -339,6 +348,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             Matrix3x3Wide.CreateFromQuaternion(orientationB, out var rB);
             var supportFinderA = default(TSupportFinderA);
             var supportFinderB = default(TSupportFinderB);
+            var vector = default(TVector);
             Simplex simplex;
             //TODO: It would be pretty easy to initialize to a triangle or tetrahedron. Might be worth it.
             SampleMinkowskiDifference(a, rA, ref supportFinderA, b, rB, ref supportFinderB, offsetB, offsetB, inactiveLanes, out simplex.AOnA, out simplex.A);
@@ -358,24 +368,24 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             {
                 supportFinderA.GetMargin(a, out var marginA);
                 supportFinderB.GetMargin(b, out var marginB);
-                containmentEpsilon = Vector.Max(containmentEpsilon, marginA + marginB);
+                containmentEpsilon = vector.Max(containmentEpsilon, marginA + marginB);
             }
             else if (supportFinderA.HasMargin)
             {
                 supportFinderA.GetMargin(a, out var marginA);
-                containmentEpsilon = Vector.Max(containmentEpsilon, marginA);
+                containmentEpsilon = vector.Max(containmentEpsilon, marginA);
             }
             else if (supportFinderB.HasMargin)
             {
                 supportFinderB.GetMargin(b, out var marginB);
-                containmentEpsilon = Vector.Max(containmentEpsilon, marginB);
+                containmentEpsilon = vector.Max(containmentEpsilon, marginB);
             }
             var containmentEpsilonSquared = containmentEpsilon * containmentEpsilon;
             Vector<float> distanceSquared = new Vector<float>(float.MaxValue);
             while (true)
             {
                 ++iterationCount;
-                FindClosestPoint(ref terminatedMask, ref simplex, out var newDistanceSquared, out var simplexClosestA, out var simplexClosest);
+                FindClosestPoint(ref vector, ref terminatedMask, ref simplex, out var newDistanceSquared, out var simplexClosestA, out var simplexClosest);
 
                 //For any lane that has not yet terminated, and which has an intersecting simplex, terminate with intersection.
                 //Note hardcoded fixed epsilon: this isn't ideal, but normals become unreliable at scales below this threshold.
